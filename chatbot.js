@@ -3,20 +3,22 @@ const natural = require("natural");
 const router = express.Router();
 
 const responses = {
-  "what is the name of the college?": "The name of the college is R.V.R & J.C College Of Engineering.",
-
-  "what is the college known for?": "Ravindra Bharathi College is known for its excellence in education and student success.",
-
- "what is the college known for?": "R.V.R & J.C College Of Engineering. is known for its excellence in education and student success.",
-
- "what is the location of the college?": "The college is located in Chowdavaram Guntur, Andhra Pradesh.",
-  "what is the college's admission process?": "The college follows a merit-based admission process.",
-  "what departments are available?": {
-    text: "The college offers departments in B.tech:",
-    options: ["Undergraduate Courses", "Postgraduate Courses", "Diploma Courses"],
+  "hi": {
+    text: "Hi, There! How Can I Help You?",
+    options: [
+      "The college offers the following Courses",
+      "Tell me about placements",
+      "What is the college known for?",
+      "What is the location of the college?",
+    ],
   },
-  "tell me about the courses available.": {
-    text: "The college offers the following categories of courses:",
+  "what is the name of the college?": "The name of the college is R.V.R & J.C College of Engineering.",
+  "what is the college known for?": "R.V.R & J.C College of Engineering is renowned for its academic excellence and industry connections.",
+  "tell me about placements":
+    "As of now, 352 offers have been made by TCS. For more details, visit <a href='https://rvrjcce.ac.in/xtrainingandplacements.php'>here</a>.",
+  "what is the location of the college?": "The college is located in Chowdavaram, Guntur, Andhra Pradesh.",
+  "what Course are available?": {
+    text: "The college offers the following Courses:",
     options: ["Undergraduate Courses", "Postgraduate Courses", "Diploma Courses"],
   },
   "undergraduate courses": {
@@ -27,19 +29,17 @@ const responses = {
     text: "Available Postgraduate Courses:",
     options: ["M.Tech", "MBA", "M.Sc"],
   },
-  "diploma courses": {
-    text: "Available Diploma Courses:",
-    options: ["Data Science", "Cybersecurity", "AI and ML"],
-  },
   "b.tech": {
-    text: 'In B.Tech Course we have a total of 11 Departments',
-    options: ["CSE", "CSD", "CSM", "CSO", "CSBS", "CIVIL", "ECE", "EEE", "MECH", "CAD"],
+    text: "B.Tech includes the following departments:",
+    options: ["CSE", "CSD", "ECE", "EEE", "MECH", "CIVIL"],
   },
-  "how can i apply for scholarships?": "You can apply for scholarships through the college's official website:<a href='https://spkhub.netlify.app'>Click Here</a>",
-  "what is the hostel fee?": "The hostel fee ranges from ₹5000 to ₹8000 per month, depending on the type of room.",
+  "how can i apply for scholarships?":"Scholarships can be applied through the official college portal. Visit <a href='https://spkhub.netlify.app'>here</a> for more information.",
+  "what is the hostel fee?": "The hostel fee ranges from ₹5000 to ₹8000 per month, depending on the room type.",
 };
 
-// Function to process the input (e.g., tokenization, stemming, etc.)
+
+const greetingKeywords = ["hi", "hello", "hey", "greetings",'yow','hi buddy','rvr'];
+
 function processInput(input) {
   const tokenizer = new natural.WordTokenizer();
   const stemmer = natural.PorterStemmer;
@@ -47,17 +47,19 @@ function processInput(input) {
   return tokens.map((token) => stemmer.stem(token)).join(" ");
 }
 
-// Route to handle incoming messages
 router.post("/message", (req, res) => {
   const userInput = req.body.text.toLowerCase().trim();
 
-  // Check for exact match in predefined responses
+  
+  if (greetingKeywords.some((greeting) => userInput.includes(greeting))) {
+    return res.json(responses["hi"]);
+  }
+
   if (responses[userInput]) {
     const response = responses[userInput];
     return res.json({ text: response.text || response, options: response.options || [] });
   }
 
-  // Process input with NLP techniques
   const processedInput = processInput(userInput);
   const response = getResponse(processedInput);
 
@@ -65,12 +67,11 @@ router.post("/message", (req, res) => {
     res.json({ text: response.text || response, options: response.options || [] });
   } else {
     res.json({
-      text: "Sorry, I don't understand your question. Try asking about courses, departments, or fees.",
+      text: "I'm sorry, I couldn't understand your question. Could you try rephrasing it?",
     });
   }
 });
 
-// Tokenize, stem, and (optional) lemmatize the input
 function getResponse(userInput) {
   const keys = Object.keys(responses);
   let bestMatch = { key: null, score: 0 };
@@ -83,21 +84,12 @@ function getResponse(userInput) {
     }
   });
 
-  // If a close match is found, return the response
-  if (bestMatch.score > 0.6) { // Lowered threshold for typo tolerance
+  if (bestMatch.score > 0.7) {
     return responses[bestMatch.key];
   }
 
-  // Special case for keyword "course" to show all course-related information
-  if (userInput.includes("course")) {
-    return responses["tell me about the courses available."];
-  }  if (userInput.includes("btech" || 'b.tech')) {
-    return responses["b.tech"];
-  }
-
-  // Suggest potential matches if no exact match is found
   const suggestions = keys.filter((key) =>
-    natural.JaroWinklerDistance(userInput, processInput(key.toLowerCase())) > 0.4
+    natural.JaroWinklerDistance(userInput, processInput(key.toLowerCase())) > 0.5
   );
 
   if (suggestions.length > 0) {
@@ -111,6 +103,3 @@ function getResponse(userInput) {
 }
 
 module.exports = router;
-
-
-
